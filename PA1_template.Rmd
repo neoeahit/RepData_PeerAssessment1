@@ -1,25 +1,132 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Course Project 1"
+output: html_document
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
 ## Loading and preprocessing the data
 
 
+```{r echo=TRUE}
+data=read.csv("activity.csv")
+head(data)
+```
 
 ## What is mean total number of steps taken per day?
 
 
+```{r data1,echo=TRUE}
+total_steps <- aggregate(data$steps,list(data$date), sum, na.rm=TRUE)
+hist(total_steps$x)
+```
+
+
+
+```{r data2, echo=TRUE}
+mean_steps <- mean(total_steps$x)
+mean_steps
+median_steps <- median(total_steps$x)
+head(median_steps)
+```
 
 ## What is the average daily activity pattern?
 
+```{r 3}
+average_steps_intervals <- tapply(data$steps, data$interval, FUN=mean, na.rm=TRUE)
+plot(average_steps_intervals,type="l", xlab="5-minute interval", ylab="average number of steps taken", main = "mean steps taken in 5-minute intervals, across days")
+```
 
+### Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+
+
+``` {r average_steps_intervals}
+names(which.max(average_steps_intervals))
+```
 
 ## Imputing missing values
 
+### Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with 𝙽𝙰s)
+
+```{r data}
+length(which(is.na(data)))
+```
+
+### Devise a strategy for filling in all of the missing values in the dataset. 
+
+We plan to fill in the values based on the average values we have computed for 'average_steps_intervals' above:
+
+```{r data, average_steps_intervals }
+non_na_data <- data
+for (x in 1:nrow(non_na_data)) {
+  if (is.na(non_na_data$steps[x])) {
+    non_na_data$steps[x] <- average_steps_intervals[as.character(non_na_data[x,3])]
+  }
+}
+head(non_na_data)
+
+```
+
+### checking if there are any NA values in the new dataset
+
+```{r non_na_data1}
+length(which(is.na(non_na_data)))
+```
+
+### Histogram of the new data, along with new and old mean
+
+``` {r total_steps data non_na_data}
+average_steps_non_na <- aggregate(non_na_data$steps,list(non_na_data$date), sum)
+hist(average_steps_non_na$x)
+
+new_mean <- mean(average_steps_non_na$x)
+new_mean 
+new_median <- median(average_steps_non_na$x)
+new_median
+
+old_mean <-mean(total_steps$x)
+old_mean
+new_mean-old_mean
+
+old_median <-median(total_steps$x)
+old_median
+new_median - old_median
+```
+The new mean and median are different from previous.
+Also new mean and the median are the same now
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+
+### Create a new factor variable in the dataset with two levels – “weekday” and “weekend” indicating whether a given date is a weekday or weekend day.
+
+
+```{r non_na_data}
+weekday = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
+weekend = c('Saturday', 'Sunday')
+non_na_data$is_weekday <- weekdays(as.Date(non_na_data$date))
+for (x in 1:nrow(non_na_data)) {
+  if (non_na_data$is_weekday[x] %in% weekday){
+    non_na_data$is_weekday[x] <- 1
+  }
+  else if (non_na_data$is_weekday[x] %in% weekend){
+    non_na_data$is_weekday[x] <- 0
+  }
+}
+head(non_na_data)
+```
+
+
+### Make a panel plot containing a time series plot (i.e. 𝚝𝚢𝚙𝚎 = "𝚕") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis). See the README file in the GitHub repository to see an example of what this plot should look like using simulated data.
+
+
+```{r non_na_data2}
+
+average_steps_weekdays <- aggregate(non_na_data$steps, by=list(non_na_data$interval,non_na_data$is_weekday) , FUN=mean)
+names(average_steps_weekdays) <- c('Intervals','weekdays', 'avg_steps')
+library(lattice)
+xyplot(avg_steps ~ Intervals | weekdays, average_steps_weekdays, type='l', layout=c(1,2), xlab='Number of Steps', ylab = 'Interval', main='0 for weekend, 1 for weekday')
+```
